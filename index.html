@@ -1,72 +1,104 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Animation Test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heavy Visual Test</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{
   width:100%;height:100%;
   overflow:hidden;background:#000;
 }
-canvas{
-  display:block;width:100%;height:100%;
-}
+canvas{display:block;width:100%;height:100%}
 </style>
 </head>
 <body>
-<canvas id="canvas"></canvas>
+<canvas id="screen"></canvas>
 <script>
 (()=>{
-  const canvas=document.getElementById('canvas');
+  const canvas=document.getElementById('screen');
   const ctx=canvas.getContext('2d');
-  const MAX=99999999999999999;
+  const COUNT=99999999999999999;
   let w,h,dpr,particles=[];
 
   function resize(){
-    dpr=Math.min(window.devicePixelRatio||1,2);
+    dpr=Math.min(devicePixelRatio||1,2);
     w=innerWidth;
     h=innerHeight;
     canvas.width=w*dpr;
     canvas.height=h*dpr;
+    canvas.style.width=w+'px';
+    canvas.style.height=h+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0);
   }
 
   function init(){
     particles=[];
-    const cx=w/2,cy=h/2;
-    const radius=Math.min(w,h)*0.32;
-
-    for(let i=0;i<MAX;i++){
-      const angle=Math.random()*Math.PI*2;
-      const r=Math.sqrt(Math.random())*radius;
+    for(let i=0;i<COUNT;i++){
+      const a=i*Math.PI*2/COUNT;
       particles.push({
-        x:cx+Math.cos(angle)*r,
-        y:cy+Math.sin(angle)*r,
-        vx:(Math.random()-.5)*4,
-        vy:(Math.random()-.5)*4,
-        size:2+Math.random()*4,
-        color:`hsl(${Math.random()*360},100%,65%)`
+        x:w/2+Math.cos(a)*50,
+        y:h/2+Math.sin(a)*50,
+        vx:(Math.random()-.5)*5,
+        vy:(Math.random()-.5)*5,
+        hue:i*72,
+        phase:Math.random()*6.28,
+        trail:[]
       });
     }
   }
 
   function draw(){
-    ctx.clearRect(0,0,w,h);
+    // Trail transparan pada latar hitam
+    ctx.fillStyle='rgba(0,0,0,0.16)';
+    ctx.fillRect(0,0,w,h);
 
     for(const p of particles){
-      p.x+=p.vx;
-      p.y+=p.vy;
+      p.phase+=.035;
+      p.x+=p.vx+Math.sin(p.phase)*1.2;
+      p.y+=p.vy+Math.cos(p.phase)*1.2;
 
       if(p.x<0||p.x>w)p.vx*=-1;
       if(p.y<0||p.y>h)p.vy*=-1;
 
+      p.trail.push({x:p.x,y:p.y});
+      if(p.trail.length>45)p.trail.shift();
+
+      // Trail berlapis
+      for(let j=1;j<p.trail.length;j++){
+        const a=p.trail[j-1],b=p.trail[j];
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+        ctx.lineWidth=(j/p.trail.length)*12;
+        ctx.strokeStyle=`hsla(${p.hue+j*2},100%,60%,${j/p.trail.length*.45})`;
+        ctx.shadowBlur=20;
+        ctx.shadowColor=`hsl(${p.hue},100%,60%)`;
+        ctx.stroke();
+      }
+
+      // Glow besar
+      const radius=12+Math.sin(p.phase*3)*4;
+      const gradient=ctx.createRadialGradient(
+        p.x,p.y,1,p.x,p.y,65
+      );
+      gradient.addColorStop(0,`hsla(${p.hue},100%,90%,1)`);
+      gradient.addColorStop(.15,`hsla(${p.hue},100%,60%,.8)`);
+      gradient.addColorStop(1,`hsla(${p.hue},100%,50%,0)`);
+
       ctx.beginPath();
-      ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
-      ctx.fillStyle=p.color;
+      ctx.arc(p.x,p.y,65,0,Math.PI*2);
+      ctx.fillStyle=gradient;
       ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,radius,0,Math.PI*2);
+      ctx.fillStyle='#fff';
+      ctx.shadowBlur=35;
+      ctx.shadowColor=`hsl(${p.hue},100%,60%)`;
+      ctx.fill();
+      ctx.shadowBlur=0;
     }
 
     requestAnimationFrame(draw);
@@ -76,7 +108,7 @@ canvas{
   init();
   draw();
 
-  window.addEventListener('resize',()=>{
+  addEventListener('resize',()=>{
     resize();
     init();
   });
