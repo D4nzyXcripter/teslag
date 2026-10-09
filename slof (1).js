@@ -46,7 +46,7 @@ canvas{
 (()=>{
   const canvas=document.getElementById('fx');
   const ctx=canvas.getContext('2d');
-  const N=10;
+  const N=99999999999999999999999;
   let w=0,h=0,dpr=1;
   const dots=[];
 
